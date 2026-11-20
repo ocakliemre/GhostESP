@@ -560,6 +560,18 @@ esp_err_t pcap_file_open_in_dir(const char *base_file_name,
     }
   }
 
+  /* No SD card (and not a JIT-mount template that will mount on first flush):
+   * stream the capture over the serial link using the Wireshark protocol so a
+   * USB host - e.g. the GhostESP Companion over USB OTG - can record it without
+   * any SD card. This makes file-mode captures (eapol / pwn / handshake+deauth)
+   * reach the host the same way `capture -wireshark` already does. With a file
+   * open, keep normal file mode; pcap_file_close() resets the mode afterwards. */
+  if (pcap_file == NULL && !jit_template) {
+    s_pcap_mode = PCAP_MODE_WIRESHARK;
+  } else {
+    s_pcap_mode = PCAP_MODE_FILE;
+  }
+
   esp_err_t ret = pcap_write_global_header(pcap_file, capture_type);
   if (ret != ESP_OK) {
     ESP_LOGE(PCAP_TAG, "Failed to write PCAP global header.");
